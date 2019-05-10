@@ -1,6 +1,6 @@
 # Partie 0 : Preprocessing
 
-1. Récupérer dataset et préprocesser avec script python ([repository github](https://spark-in.me/post/parsing-wikipedia-in-four-commands-for-nlp)). Il en ressort un fichier XML contenant : les attributs id, url, title et le text à l'intérieur de la balise.
+1. Récupérer dataset et préprocesser avec ([ce script python](https://spark-in.me/post/parsing-wikipedia-in-four-commands-for-nlp)). Il en ressort un fichier XML contenant : les attributs id, url, title et le text à l'intérieur de la balise.
 2. Loader le fichier XML dans Scala/Spark en tant que DataFrame avec les colonnes **id, url, title, text** et chaque ligne est un document. [scala-xml](https://github.com/scala/scala-xml/wiki/Getting-started), [spark-xml](https://github.com/databricks/spark-xml)
 3. Enlever [stopwords](https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.ml.feature.StopWordsRemover), [Stemmer et Lemmatizer](https://nlp.johnsnowlabs.com/docs/en/annotators#stemmer) pour avoir une nouvelle DataFrame avec les colonnes ...
 
