@@ -1,37 +1,138 @@
-# Partie 0 : Preprocessing
+# Big Data Analytics Project - Analyzing Wikipedia with Apache Spark
 
-1. Récupérer dataset et préprocesser avec ([ce script python](https://spark-in.me/post/parsing-wikipedia-in-four-commands-for-nlp)). Il en ressort un fichier XML contenant : les attributs id, url, title et le text à l'intérieur de la balise.
-2. Loader le fichier XML dans Scala/Spark en tant que DataFrame avec les colonnes **id, url, title, text** et chaque ligne est un document. [scala-xml](https://github.com/scala/scala-xml/wiki/Getting-started), [spark-xml](https://github.com/databricks/spark-xml)
-3. Enlever [stopwords](https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.ml.feature.StopWordsRemover), [Stemmer et Lemmatizer](https://nlp.johnsnowlabs.com/docs/en/annotators#stemmer) pour avoir une nouvelle DataFrame avec les colonnes ...
+This project is developed as part of the course _Big Data Analytics_ of the
+Master of Science in Engineering, Hes-SO Master.
 
-A la fin de cette partie, on doit avoir une DataFrame comme ceci
+The objective is to analyze Wikipedia in order to automatically give a topic
+name for each article, by selecting more or less 5 words which describe best the
+article.
+
+## Dataset description
+
+The dataset which is used for the analysis is available here:
+
+[wikipedia dump](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
+
+It contains a very messy XML document, which obviously needs to be pre-processed
+before extracting anything from it. Let's describe a little bit its structure.
+
+The beginning of the document has various unneeded tags which seems to be more
+or less metadata. Let's forget about this and scroll down a little. At some point,
+a `<page>` tag should appear. Each of these tags represent a Wikipedia article
+and contains the information we are looking for, as well as unwanted information
+which need to be filtered out.
+
+Among the sub-tag of the `<page>`, two tags which seem obviously useful are:
+
+1. `<title>`
+2. `<text>`
+
+One can notice that the text is far from a clean text ready to be used. For example,
+the subtitles of the page are represented like this:
+
+== subtitle ==
+
+Furthermore, there are a lot of brackets (`[]` and `{}`) which seem to represent the
+multiple links between articles, a thing that wikipedia is well-known for.
+
+## Features descriptions/extraction and preprocessing
+
+Because Spark is not known for its XML parsing skills, a first preprocessing step
+is done by this [tool](https://github.com/attardi/wikiextractor) written in python. As a result, a cleaned XML document is produced with a much
+simpler structure:
+
+```xml
+<doc id="unique id for each article" url="wikipedia url" title="title of the article">
+    this is the whole text of the article, without any weird brackets...
+</doc>
+<doc ...>
+...
+</doc>
+```
+
+The resulting script create a folder structure which is as follow:
+
+```
+wiki
+    -- AA
+        -- wiki_00
+        -- wiki_01
+        -- ...
+        -- wiki_99
+    -- AB
+        -- wiki_00
+        -- wiki_01
+        -- ...
+        -- wiki_99
+    -- AC
+        -- ...
+    -- ...
+```
+
+This is not really a problem since these multiple documents can be merge together
+with a simple bash command from the root directory (i.e. wiki/):
+
+```bash
+for dir in *; do
+    cat $dir/** >> wiki.xml;
+done
+```
+
+Since the resulting xml contains tags only to delimit articles, the parsing with
+Spark is much easier. The idea is to load the dataset into a `DataFrame`,
+where each row is an article, with the following columns: **id**, **url**, **title**, **text**
+
+Each **text** cell of the `DataFrame` can then be pre-processed with the
+usual NLP pre-processing (stop words removal, apply a stemmer and a lemmatizer, ...)
+
+As a result, the end of this part should return the following `DataFrame`:
 
 | id  | url        | title            | text                         |
 | --- | ---------- | ---------------- | ---------------------------- |
 | 0   | http://... | Title of article | Preprocessed text of article |
 | ... | ...        | ...              | ...                          |
 
-# Partie 1 : LSA
+## Analysis questions
 
-1. Calcul de TF-IDF sur les textes des documents [spark tf-idf](https://spark.apache.org/docs/latest/mllib-feature-extraction.html#tf-idf)
-2. SVD (Singular Value Decomposition) [spark svd](https://spark.apache.org/docs/latest/mllib-dimensionality-reduction.html) à partir de la matrice TF-IDF
+The questions that this project is trying to answer can be formulated like this:
 
-A la fin de cette partie, on doit avoir pour chaque document un vecteur de caractéristiques le représentant.
+- How well can we regroup wikipedia articles according to their similarity into N defined categories ?
+- Can we extract the most informative words from these groups in order to give them a label ?
 
-# Partie 2 : Clustering
+To summarize, the analysis tries to categorize wikipedia, by working either with
+the articles or with the words directly.
 
-Par exemple avec KMeans.
+## Algorithms
 
-1. Créer un modèle avec KMeans avec comme features le vecteur de la partie précédente
-2. K correspond au nombre de topic différents que l'on veut
-3. Utiliser la distance du cosinus pour calculer la distance entre les centroid peut être intéressant à tester
+### LSA
 
-# Partie 3 : Word2Vec
+- TF-IDF
+- SVD (singular value decomposition)
 
-1. Création d'un "super-document" contenant tous les mots de tous les documents (l'entièreté du corpus)
-2. Appliquer Word2Vec sur ce super-document. On a alors un vecteur pour chaque mot du super-document (donc un vecteur pour chaque mots de tout le dataset). Cela génère un modèle.
-3. Pour chacun des mots d'un cluster de la partie 2, on prédit leur vecteur Word2Vec grâce au modèle précédemment créé. Cela génère un sub-super-document par cluster.
-4. Ensuite, on calcul le vecteur moyen du sub-super-document
-5. Pour chaque sub-super-document, on cherche des mots-clés en calculant les mots les plus proche du centre. Cela donne des mots-clés pour le topic du cluster.
+this should give a feature vector for each article.
 
-# Partie 4 : Justifier l'échec
+### Clustering
+
+For example, with K-Means:
+
+1. Using the feature vector computed in the previous part
+2. K = number of desired topics
+3. Exploring the use of the Cosine distance to cluster the articles
+
+### Word2Vec
+
+1. Get the whole corpus of the articles.
+2. Generate a Word2Vec model with the whole corpus. Each word is therefore represented by a feature vector.
+3. Get the corpus of one cluster of the previous part.
+4. Apply Word2Vec to the cluster's corpus.
+5. Take the mean feature vector of the cluster's corpus.
+6. Look at the closest feature vectors of this mean feature vector. Their corresponding
+   word should be a good insight of the cluster.
+
+## Optimizations
+
+## Tests and evaluations
+
+## Results
+
+## Future work
