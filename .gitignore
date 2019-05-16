@@ -1,5 +1,9 @@
-data/**
-
+*data/
+*.bloop
+*.metals
+*project
+*spark-warehouse
+*target
 
 ########################
 # gitignore.io
