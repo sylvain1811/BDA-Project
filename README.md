@@ -38,16 +38,17 @@ multiple links between articles, a thing that wikipedia is well-known for.
 ## Features descriptions/extraction and preprocessing
 
 Because Spark is not known for its XML parsing skills, a first preprocessing step
-is done by this [tool](https://github.com/attardi/wikiextractor) written in python. As a result, a cleaned XML document is produced with a much
-simpler structure:
+is done by this [tool](https://github.com/attardi/wikiextractor) written in python. As a result,
+a JSON document is produced with a much simpler structure:
 
-```xml
-<doc id="unique id for each article" url="wikipedia url" title="title of the article">
-    this is the whole text of the article, without any weird brackets...
-</doc>
-<doc ...>
-...
-</doc>
+```json
+{
+    "id": "unique id for each article",
+    "url": "wikipedia url",
+    "title": "title of the article",
+    "text": "text of the article"
+}
+
 ```
 
 The resulting script create a folder structure which is as follow:
@@ -74,50 +75,68 @@ with a simple bash command from the root directory (i.e. wiki/):
 
 ```bash
 for dir in *; do
-    cat $dir/** >> wiki.xml;
+    cat $dir/** >> wiki.json;
 done
 ```
 
-Since the resulting xml contains tags only to delimit articles, the parsing with
-Spark is much easier. The idea is to load the dataset into a `DataFrame`,
-where each row is an article, with the following columns: **id**, **url**, **title**, **text**
+Since the output is a json file, Spark can load it into a `DataFrame` without any troubles.
+The idea is that each row is an article, with the following columns: **id**, **url**, **title**, **text**
 
-Each **text** cell of the `DataFrame` can then be pre-processed with the
-usual NLP pre-processing (stop words removal, apply a stemmer and a lemmatizer, ...)
-
-As a result, the end of this part should return the following `DataFrame`:
+Here is the schema of the loaded `DataFrame`:
 
 | id  | url        | title            | text                         |
 | --- | ---------- | ---------------- | ---------------------------- |
 | 0   | http://... | Title of article | Preprocessed text of article |
 | ... | ...        | ...              | ...                          |
 
+Each **text** cell of the `DataFrame` can then be pre-processed with the
+usual NLP pre-processing (stop words removal, apply a lemmatizer, ...).
+
+### Preprocess the DataFrame with Spark ML
+
+Two transformations are applied to the raw dataset before starting its analysis.
+Each one is described below.
+
+1. The text of each article is just a big `String`, which is not ideal for working
+with words. This problem can easily be solved by applying a _Tokenizer_ to each
+cell of the text column. This will split the String, leaving us an array of words
+to work with.
+2. It's very usual to remove stop words from a corpus. Without surprises, this
+preprocessing undergo the same process.
+
+### Extract features with TF-IDF
+
+Even though the text is tokenized and freed from stop words, it is still not
+possible to analyze it. One more step is needed to extract a small number of
+features from these words. For this, a term frequency hashing combined to the
+inverse document frequency is applied to the `DataFrame`. Each article is therefore
+represented by a chosen number of features.
+
 ## Analysis questions
 
 The questions that this project is trying to answer can be formulated like this:
 
-- How well can we regroup wikipedia articles according to their similarity into N defined categories ?
+- How well can we regroup wikipedia articles according to their similarity ?
 - Can we extract the most informative words from these groups in order to give them a label ?
 
-To summarize, the analysis tries to categorize wikipedia, by working either with
-the articles or with the words directly.
+In other words, the idea is to apply topic modeling to the Wikipedia corpus,
+thanks to various techniques and evaluate them.
 
 ## Algorithms
 
-### LSA
+### LDA
 
-- TF-IDF
-- SVD (singular value decomposition)
-
-this should give a feature vector for each article.
+[TODO]
 
 ### Clustering
 
 For example, with K-Means:
 
-1. Using the feature vector computed in the previous part
+1. Using a feature vector for each document
 2. K = number of desired topics
-3. Exploring the use of the Cosine distance to cluster the articles
+
+The drawback of using K-Means is that there are no metrics to evaluate it, except
+from checking by hand to make sure it is more or less accurate.
 
 ### Word2Vec
 

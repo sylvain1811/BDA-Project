@@ -1,3 +1,4 @@
+import org.apache.spark.ml.clustering.{KMeans, KMeansModel}
 import org.apache.spark.ml.feature.{HashingTF, IDF, RegexTokenizer, StopWordsRemover}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -34,15 +35,40 @@ object WikipediaTopicLabeling {
         val idf = new IDF().setInputCol("raw features").setOutputCol("features")
         val idfModel = idf.fit(featurizedData)
 
-        idfModel.transform(featurizedData)
+        idfModel.transform(featurizedData).drop("text", "url", "raw words", "raw features")
     }
 
+    def cosineSimilarity(v1: List[Double], v2: List[Double]): Double = {
+        val numerator = (v1.zip(v2)).foldRight(0.0)((elem, acc) => acc + elem._1 * elem._2)
+        val denumerator =
+            math.sqrt(v1.foldRight(0.0)((elem, acc) => acc + elem * elem)) *
+            math.sqrt(v2.foldRight(0.0)((elem, acc) => acc + elem * elem))
+
+        numerator / denumerator
+    }
+
+  def clustering(data: DataFrame): Tuple2[KMeansModel, DataFrame] = {
+    val kmeans = new KMeans().setK(10).setSeed(1L)
+    val model = kmeans.fit(data).setPredictionCol("cluster")
+
+    (model, model.transform(data))
+  }
+
   def main(args: Array[String]) {
-    val spark = SparkSession.builder.appName("Wikipedia Topic Labeling").getOrCreate()
+    val spark = SparkSession.builder
+      .appName("Wikipedia Topic Labeling")
+      .master("local")
+      .getOrCreate()
 
-    val data = preprocessing(spark, "data/wiki.json")
+    val data = preprocessing(spark, "data/wiki.json").cache()
 
-    println(data.select("raw features").show)
+    val (model, clusteredData) = clustering(data)
+
+    // Shows the result.
+    println("Cluster Centers: ")
+    model.clusterCenters.foreach(println)
+
+    println(clusteredData.orderBy("cluster").show)
 
     spark.stop()
   }
