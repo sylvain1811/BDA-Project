@@ -1,3 +1,3 @@
-#!/bin/sh
+#!/bin/bash
 
-python3 wikiextractor/WikiExtractor.py -o data/wiki --json --process 8 WikipediaTopicLabeling/data/enwiki-latest-pages-articles1.xml-p10p30302
+python3 wikiextractor/WikiExtractor.py -o data/wiki --process 12 --json data/enwiki-latest-pages-articles1.xml-p10p30302.bz2
