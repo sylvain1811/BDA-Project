@@ -11,24 +11,24 @@ object WikipediaTopicLabeling {
 
         // tokenizer
         val regexTokenizer = new RegexTokenizer()
-          .setInputCol("text")
-          .setOutputCol("raw words")
-          .setPattern("\\W")
+            .setInputCol("text")
+            .setOutputCol("raw words")
+            .setPattern("\\W")
 
         val tokenizedData = regexTokenizer.transform(jsonData)
 
         // stop words removal
         val remover = new StopWordsRemover()
-          .setInputCol("raw words")
-          .setOutputCol("words")
+            .setInputCol("raw words")
+            .setOutputCol("words")
 
         val preprocessedData = remover.transform(tokenizedData)
 
         // TF-IDF
         val hashingTF = new HashingTF()
-          .setInputCol("words")
-          .setOutputCol("raw features")
-          .setNumFeatures(20)
+            .setInputCol("words")
+            .setOutputCol("raw features")
+            .setNumFeatures(20)
 
         val featurizedData = hashingTF.transform(preprocessedData)
 
@@ -39,37 +39,37 @@ object WikipediaTopicLabeling {
     }
 
     def cosineSimilarity(v1: List[Double], v2: List[Double]): Double = {
-        val numerator = (v1.zip(v2)).foldRight(0.0)((elem, acc) => acc + elem._1 * elem._2)
-        val denumerator =
+        val numerator = v1.zip(v2).foldRight(0.0)((elem, acc) => acc + elem._1 * elem._2)
+        val denominator =
             math.sqrt(v1.foldRight(0.0)((elem, acc) => acc + elem * elem)) *
-            math.sqrt(v2.foldRight(0.0)((elem, acc) => acc + elem * elem))
+                math.sqrt(v2.foldRight(0.0)((elem, acc) => acc + elem * elem))
 
-        numerator / denumerator
+        numerator / denominator
     }
 
-  def clustering(data: DataFrame): Tuple2[KMeansModel, DataFrame] = {
-    val kmeans = new KMeans().setK(10).setSeed(1L)
-    val model = kmeans.fit(data).setPredictionCol("cluster")
+    def clustering(data: DataFrame): (KMeansModel, DataFrame) = {
+        val kmeans = new KMeans().setK(10).setSeed(1L)
+        val model = kmeans.fit(data).setPredictionCol("cluster")
 
-    (model, model.transform(data))
-  }
+        (model, model.transform(data))
+    }
 
-  def main(args: Array[String]) {
-    val spark = SparkSession.builder
-      .appName("Wikipedia Topic Labeling")
-      .master("local")
-      .getOrCreate()
+    def main(args: Array[String]) {
+        val spark = SparkSession.builder
+            .appName("Wikipedia Topic Labeling")
+            .master("local")
+            .getOrCreate()
 
-    val data = preprocessing(spark, "data/wiki.json").cache()
+        val data = preprocessing(spark, "data/wiki.json").cache()
 
-    val (model, clusteredData) = clustering(data)
+        val (model, clusteredData) = clustering(data)
 
-    // Shows the result.
-    println("Cluster Centers: ")
-    model.clusterCenters.foreach(println)
+        // Shows the result.
+        println("Cluster Centers: ")
+        model.clusterCenters.foreach(println)
 
-    println(clusteredData.orderBy("cluster").show)
+        println(clusteredData.orderBy("cluster").show)
 
-    spark.stop()
-  }
+        spark.stop()
+    }
 }
