@@ -60,8 +60,8 @@ object WikipediaTopicLabeling {
             .master("local")
             .getOrCreate()
 
-        val data = preprocessing(spark, "s3a://bda-project/wiki.json").cache()
-        //val data = preprocessing(spark, "data/wiki.json").cache()
+        // val data = preprocessing(spark, "s3a://bda-project/wiki.json").cache()
+        val data = preprocessing(spark, "data/wiki.json").cache()
 
         val (model, clusteredData) = clustering(data)
 
