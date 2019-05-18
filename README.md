@@ -239,11 +239,11 @@ Then, to access your dataset stored on S3 from Spark, you need to upload this li
 You can download theses files directly into the cluster with a remote `wget`. Thanks to `flintrock run-command`.
 
 ```bash
-flintrock run-command bda-wiki-cluster wget -o spark/jars/hadoop-aws-2.7.2.jar http://central.maven.org/maven2/org/apache/hadoop/hadoop-aws/2.7.2/hadoop-aws-2.7.2.jar
-flintrock run-command bda-wiki-cluster wget -o spark/jars/aws-java-sdk-1.7.4.jar http://central.maven.org/maven2/com/amazonaws/aws-java-sdk/1.7.4/aws-java-sdk-1.7.4.jar
+flintrock run-command bda-wiki-cluster "wget -o spark/jars/hadoop-aws-2.7.2.jar http://central.maven.org/maven2/org/apache/hadoop/hadoop-aws/2.7.2/hadoop-aws-2.7.2.jar"
+flintrock run-command bda-wiki-cluster "wget -o spark/jars/aws-java-sdk-1.7.4.jar http://central.maven.org/maven2/com/amazonaws/aws-java-sdk/1.7.4/aws-java-sdk-1.7.4.jar"
 ```
 
-Or you can download theses files locally and upload them with `flintrock copy-file`.
+Or you can download theses files on your local machine and upload them with `flintrock copy-file`.
 
 ```bash
 flintrock copy-file bda-wiki-cluster /local/path/to/hadoop-aws-2.7.2.jar /home/ec2-user/spark/jars/
