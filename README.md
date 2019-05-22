@@ -181,8 +181,8 @@ aws_secret_access_key=associated_secret_access_key
 Use aws-cli to upload the dataset (wiki.json) into a S3 bucket.
 
 ```bash
-aws s3 mb s3://bda-bucket
-aws s3 cp /path/to/wiki.json s3://bda-bucket
+aws s3 mb s3://bda-wiki-bucket
+aws s3 cp /path/to/wiki.json s3://bda-wiki-bucket
 ```
 
 ### Configure Flintrock
