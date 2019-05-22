@@ -13,6 +13,7 @@ object WikipediaTopicLabeling {
 
     def preprocessing(spark: SparkSession, dataset: DataFrame): PipelineModel = { //(RDD[(Long, Vector)], Array[String], Long) = {
 
+
         val tokenizer = new RegexTokenizer()
           .setInputCol("text")
           .setOutputCol("token")
@@ -36,17 +37,17 @@ object WikipediaTopicLabeling {
         val preprocessingModel = pipeline.fit(dataset)
         preprocessingModel.write.overwrite.save("models/preprocessing")
         preprocessingModel
-        //        getPreprocessingOutputs(preprocessingModel, dataset)
     }
+
 
     def cosineSimilarity(v1: List[Double], v2: List[Double]): Double = {
         val numerator = (v1.zip(v2)).foldRight(0.0)((elem, acc) => acc + elem._1 * elem._2)
         val denominator =
             math.sqrt(v1.foldRight(0.0)((elem, acc) => acc + elem * elem)) *
               math.sqrt(v2.foldRight(0.0)((elem, acc) => acc + elem * elem))
-
         numerator / denominator
     }
+
 
     def main(args: Array[String]) {
         val spark = SparkSession.builder
