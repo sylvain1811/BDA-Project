@@ -1,75 +1,114 @@
-import org.apache.spark.ml.clustering.{KMeans, KMeansModel}
-import org.apache.spark.ml.feature.{HashingTF, IDF, RegexTokenizer, StopWordsRemover}
-import org.apache.spark.sql.{DataFrame, SparkSession}
-
+import com.johnsnowlabs.nlp.annotator._
+import com.johnsnowlabs.nlp.base._
+import org.apache.spark.ml.{Pipeline, PipelineModel}
+import org.apache.spark.ml.clustering.{KMeans, KMeansModel, LDA, LocalLDAModel}
+import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel, RegexTokenizer, StopWordsRemover}
+import org.apache.spark.ml.linalg.{DenseVector, SparseVector}
+import org.apache.spark.ml.linalg.{Vector => MLVector}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+import org.apache.spark.rdd.RDD
 
 object WikipediaTopicLabeling {
 
-    def preprocessing(spark: SparkSession, path: String): DataFrame = {
-        // load json
-        val jsonData = spark.sqlContext.read.json(path)
+    def preprocessing(spark: SparkSession, dataset: DataFrame): PipelineModel = { //(RDD[(Long, Vector)], Array[String], Long) = {
 
-        // tokenizer
-        val regexTokenizer = new RegexTokenizer()
+        val tokenizer = new RegexTokenizer()
           .setInputCol("text")
-          .setOutputCol("raw words")
+          .setOutputCol("token")
           .setPattern("\\W")
 
-        val tokenizedData = regexTokenizer.transform(jsonData)
+        val stopWordRemover = new StopWordsRemover()
+          .setInputCol("token")
+          .setOutputCol("stop_words")
 
-        // stop words removal
-        val remover = new StopWordsRemover()
-          .setInputCol("raw words")
-          .setOutputCol("words")
+        val countVectorizer = new CountVectorizer()
+          .setInputCol("stop_words")
+          .setOutputCol("features")
 
-        val preprocessedData = remover.transform(tokenizedData)
+        val pipeline = new Pipeline()
+          .setStages(Array(
+              tokenizer,
+              stopWordRemover,
+              countVectorizer
+          ))
 
-        // TF-IDF
-        val hashingTF = new HashingTF()
-          .setInputCol("words")
-          .setOutputCol("raw features")
-          .setNumFeatures(20)
-
-        val featurizedData = hashingTF.transform(preprocessedData)
-
-        val idf = new IDF().setInputCol("raw features").setOutputCol("features")
-        val idfModel = idf.fit(featurizedData)
-
-        idfModel.transform(featurizedData).drop("text", "url", "raw words", "raw features")
+        val preprocessingModel = pipeline.fit(dataset)
+        preprocessingModel.write.overwrite.save("models/preprocessing")
+        preprocessingModel
+        //        getPreprocessingOutputs(preprocessingModel, dataset)
     }
 
     def cosineSimilarity(v1: List[Double], v2: List[Double]): Double = {
         val numerator = (v1.zip(v2)).foldRight(0.0)((elem, acc) => acc + elem._1 * elem._2)
-        val denumerator =
+        val denominator =
             math.sqrt(v1.foldRight(0.0)((elem, acc) => acc + elem * elem)) *
-            math.sqrt(v2.foldRight(0.0)((elem, acc) => acc + elem * elem))
+              math.sqrt(v2.foldRight(0.0)((elem, acc) => acc + elem * elem))
 
-        numerator / denumerator
+        numerator / denominator
     }
 
-  def clustering(data: DataFrame): Tuple2[KMeansModel, DataFrame] = {
-    val kmeans = new KMeans().setK(10).setSeed(1L)
-    val model = kmeans.fit(data).setPredictionCol("cluster")
+    def main(args: Array[String]) {
+        val spark = SparkSession.builder
+          .appName("Wikipedia Topic Labeling")
+          .master("local[*]")
+          .getOrCreate()
 
-    (model, model.transform(data))
-  }
+        spark.sparkContext.setLogLevel("ERROR")
 
-  def main(args: Array[String]) {
-    val spark = SparkSession.builder
-      .appName("Wikipedia Topic Labeling")
-      .master("local")
-      .getOrCreate()
+        import spark.implicits._
 
-    val data = preprocessing(spark, "data/wiki.json").cache()
+        val train = true
 
-    val (model, clusteredData) = clustering(data)
+        val dataset = spark.sqlContext.read.json("data/wiki_small.json")
 
-    // Shows the result.
-    println("Cluster Centers: ")
-    model.clusterCenters.foreach(println)
+        val preprocessingModel = if (train) {
+            preprocessing(spark, dataset)
+        } else {
+            PipelineModel.load("models/preprocessing")
+        }
 
-    println(clusteredData.orderBy("cluster").show)
+        val preprocessedData = preprocessingModel.transform(dataset)
+        val vocabArray = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
 
-    spark.stop()
-  }
+        println(preprocessedData.show)
+        vocabArray.foreach(println)
+
+        val ldaModel = if (train) {
+            val lda = new LDA().setK(10).setMaxIter(1)
+            val ldaModel = lda.fit(preprocessedData)
+            ldaModel.write.overwrite.save("model/lda")
+            ldaModel
+        } else {
+            LocalLDAModel.load("models/lda")
+        }
+
+        val topicIndices = ldaModel.describeTopics(3)
+
+
+        // src: https://github.com/karenyyy/Coursera_and_Udemy/blob/2e93a401868ff25900ff83550c08c16588ac2267/Big_Data_coursera/Exercises/notebooks/ScalaMachineLearningProjects_Code/Chapter05/TopicModelling/topicModellingwithLDA.scala
+        val topics = topicIndices.map {
+            case Row(topic: Int, termIndices: Seq[Int], termWeights: Seq[Double]) => {
+                termIndices.zip(termWeights).map {
+                    case (termIndice, termWeight) => (vocabArray(termIndice.toInt), termWeight)
+                }
+            }
+        }.collect()
+
+
+        print("3 topics:")
+        topics.zipWithIndex.foreach {
+            case (topic, i) =>
+                println(s"topic $i")
+                println("------------------------")
+                topic.foreach {
+                    case (term, weight) =>
+                        println(s"$term \t $weight")
+                }
+                println("------------------------")
+                println()
+        }
+
+        spark.stop()
+    }
 }

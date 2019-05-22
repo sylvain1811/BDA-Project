@@ -70,7 +70,7 @@ wiki
     -- ...
 ```
 
-This is not really a problem since these multiple documents can be merge together
+This is not really a problem since these multiple documents can be merged together
 with a simple bash command from the root directory (i.e. wiki/):
 
 ```bash
