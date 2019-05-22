@@ -11,7 +11,9 @@ article.
 
 The dataset which is used for the analysis is available here:
 
-[wikipedia dump](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
+[Wikipedia dumps](https://dumps.wikimedia.org/enwiki/latest/)
+
+The one named [enwiki-latest-pages-articles.xml.bz2](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2) is the full dataset (15GB compressed), but we often use [enwiki-latest-pages-articles1.xml-p10p30302.bz2](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles1.xml-p10p30302.bz2) which contains fewer articles.
 
 It contains a very messy XML document, which obviously needs to be pre-processed
 before extracting anything from it. Let's describe a little bit its structure.
