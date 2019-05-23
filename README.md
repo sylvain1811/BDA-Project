@@ -11,7 +11,9 @@ article.
 
 The dataset which is used for the analysis is available here:
 
-[wikipedia dump](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
+[Wikipedia dumps](https://dumps.wikimedia.org/enwiki/latest/)
+
+The one named [enwiki-latest-pages-articles.xml.bz2](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2) is the full dataset (15GB compressed), but we often use [enwiki-latest-pages-articles1.xml-p10p30302.bz2](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles1.xml-p10p30302.bz2) which contains fewer articles.
 
 It contains a very messy XML document, which obviously needs to be pre-processed
 before extracting anything from it. Let's describe a little bit its structure.
@@ -179,28 +181,25 @@ aws_secret_access_key=associated_secret_access_key
 Use aws-cli to upload the dataset (wiki.json) into a S3 bucket.
 
 ```bash
-aws s3 mb s3://bda-bucket
-aws s3 cp /path/to/wiki.json s3://bda-bucket
+aws s3 mb s3://bda-wiki-bucket
+aws s3 cp /path/to/wiki.json s3://bda-wiki-bucket
 ```
 
 ### Configure Flintrock
 
-Configure flintrock (with `flintrock configure`) like this:
+Copy `flintrock-config-example.yaml` to `flintrock-config.yaml` and update fields corresponding to your account.
 
 ```yml
 services:
   spark:
-    version: 2.2.1
+    version: 2.4.3
     download-source: "https://archive.apache.org/dist/spark/spark-{v}/spark-{v}-bin-hadoop2.7.tgz"
-  hdfs:
-    version: 2.7.7
-    download-source: https://www-eu.apache.org/dist/hadoop/common/hadoop-{v}/hadoop-{v}-src.tar.gz
 
 provider: ec2
 
 providers:
   ec2:
-    key-name: aws-bda-project # cluster name
+    key-name: aws-bda-project # key pair name in aws
     identity-file: "/path/to/private_key.pem"
     instance-type: m3.medium # Choose EC2 flavor
     region: us-east-1
@@ -209,7 +208,7 @@ providers:
     vpc-id: vpc-dc7caea6 # your VPC id
     subnet-id: subnet-42fe2b7c # one of your subnet id
     security-groups:
-      - only-ssh-from-anywhere # security-group name that allow ssh from anywhere (0.0.0.0/0)
+      - only-ssh-from-anywhere # security-group name that allow ssh (22) from anywhere (0.0.0.0/0)
     instance-profile-name: Spark_S3 # IAM Role with AmazonS3FullAccess policy
     tenancy: default
     ebs-optimized: no
@@ -221,36 +220,20 @@ launch:
 debug: false
 ```
 
-This will create the config file at `~/.config/flintrock/config.yaml`. You can reopen and edit it later if necessary.
+This config file will be read by the script `create-cluster.sh`.
 
 ### Launch and configure the cluster
 
-Launch your cluster with
+Launch your cluster using the script `create-cluster.sh`
 
 ```bash
-flintrock launch bda-wiki-cluster
+./create-cluster.sh bda-wiki-cluster
 ```
 
-Then, to access your dataset stored on S3 from Spark, you need to upload this libraries to the cluster.
+This script will create and configure the cluster. Then it will download some required jars directly in the cluster instances.
+This jars are required to access your dataset stored on S3 from Spark.
 
-- [hadoop-aws-2.7.7.jar](http://central.maven.org/maven2/org/apache/hadoop/hadoop-aws/2.7.7/hadoop-aws-2.7.7.jar)
-- [aws-java-sdk-1.7.4.jar](http://central.maven.org/maven2/com/amazonaws/aws-java-sdk/1.7.4/aws-java-sdk-1.7.4.jar)
-
-You can download theses files directly into the cluster with a remote `wget`. Thanks to `flintrock run-command`.
-
-```bash
-flintrock run-command bda-wiki-cluster "wget -o spark/jars/hadoop-aws-2.7.7.jar http://central.maven.org/maven2/org/apache/hadoop/hadoop-aws/2.7.7/hadoop-aws-2.7.7.jar"
-flintrock run-command bda-wiki-cluster "wget -o spark/jars/aws-java-sdk-1.7.4.jar http://central.maven.org/maven2/com/amazonaws/aws-java-sdk/1.7.4/aws-java-sdk-1.7.4.jar"
-```
-
-Or you can download theses files on your local machine and upload them with `flintrock copy-file`.
-
-```bash
-flintrock copy-file bda-wiki-cluster /local/path/to/hadoop-aws-2.7.7.jar /home/ec2-user/spark/jars/
-flintrock copy-file bda-wiki-cluster /local/path/to/aws-java-sdk-1.7.4.jar /home/ec2-user/spark/jars/
-```
-
-### Package the program and upload the archive
+### Package the program
 
 First, you need to package the program in a jar file that you will upload on the cluster. You can use sbt in command line or compile your project from your IDE.
 
@@ -261,15 +244,9 @@ sbt package
 
 This will generate a jar file in `./target/scala-2.11/wikipedia-topic-project_2.11-1.0.jar`
 
-Once you have this jar, you need to upload it to the cluster.
-
-```bash
-flintrock copy-file bda-wiki-cluster ./target/scala-2.11/wikipedia-topic-project_2.11-1.0.jar /home/ec2-user/
-```
-
 ### Submit a job to the cluster
 
-To submit a job, you need to know the DNS name of the master node of your cluster. You can get it with:
+To submit a job, you need to know the DNS name of the master node of your cluster. It has been shown by the `create-cluster.sh` script. But you can also get it with:
 
 ```bash
 $ flintrock describe
@@ -285,14 +262,14 @@ bda-wiki-cluster:
 
 Here it is `ec2-100-25-152-130.compute-1.amazonaws.com`
 
-Then, from your local machine, you can use spark-submit to launch a new job on your cluster. You must give the DNS name of the master node as a parameter. Don't forget the port number.
+Then you can use the script `launch-app.sh` to upload the packaged app and submit a new job. It requires 2 arguments which are the cluster name and the master DNS name.
+
+:warning: Spark bin folder need to be in your PATH. You can update your PATH variable by adding `export PATH=$PATH:/path/to/spark-2.4.3-bin-hadoop2.7/bin` in `.env` file, which will be sourced automatically by running the following script.
 
 ```bash
-spark-submit \
- --class WikipediaTopicLabeling \
- --master spark://ec2-100-25-152-130.compute-1.amazonaws.com:7077 \
- --deploy-mode cluster \
- /home/ec2-user/wikipedia-topic-project_2.11-1.0.jar
+$ ./launch-app.sh bda-wiki-cluster ec2-100-25-152-130.compute-1.amazonaws.com
+[...]
+Go to http://ec2-100-25-152-130.compute-1.amazonaws.com:8080 to view the app running.
 ```
 
-Then you can see the running jobs and their outputs per slaves at <http://ec2-100-25-152-130.compute-1.amazonaws.com:8080>
+As the script say, you can then follow your app execution via spark web interface at the given address.
