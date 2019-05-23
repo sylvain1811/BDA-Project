@@ -61,7 +61,7 @@ object WikipediaTopicLabeling {
 
         val train = true
 
-        val dataset = spark.sqlContext.read.json("data/wiki_small.json")
+        val dataset = spark.sqlContext.read.json("data/wiki.json")
 
         val preprocessingModel = if (train) {
             preprocessing(spark, dataset)
@@ -73,10 +73,10 @@ object WikipediaTopicLabeling {
         val vocabArray = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
 
         println(preprocessedData.show)
-        vocabArray.foreach(println)
+        println(vocabArray.length)
 
         val ldaModel = if (train) {
-            val lda = new LDA().setK(10).setMaxIter(1)
+            val lda = new LDA().setK(10).setMaxIter(10)
             val ldaModel = lda.fit(preprocessedData)
             ldaModel.write.overwrite.save("model/lda")
             ldaModel
@@ -109,6 +109,8 @@ object WikipediaTopicLabeling {
                 println("------------------------")
                 println()
         }
+
+        println(ldaModel.transform(preprocessedData).show(false))
 
         spark.stop()
     }
