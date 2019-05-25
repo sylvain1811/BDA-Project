@@ -13,7 +13,9 @@ libraryDependencies ++= Seq(
     "org.apache.spark" %% "spark-core" % sparkVersion,
     "org.apache.spark" %% "spark-sql" % sparkVersion,
     "org.apache.spark" %% "spark-mllib" % sparkVersion,
-    "com.johnsnowlabs.nlp" %% "spark-nlp" % sparkNlpVersion,
+
+    //    "com.johnsnowlabs.nlp" %% "spark-nlp" % sparkNlpVersion,
+    
     "org.apache.hadoop" % "hadoop-aws" % hadoopAwsVersion,
     "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion
 )
