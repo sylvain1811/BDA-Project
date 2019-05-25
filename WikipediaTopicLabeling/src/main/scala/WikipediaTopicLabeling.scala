@@ -122,9 +122,9 @@ object WikipediaTopicLabeling {
 
         val train = true
 
-
         println("load dataset...")
         // val dataset = spark.sqlContext.read.json("s3a://bda-wiki-bucket/wiki.json")
+        // val dataset = spark.sqlContext.read.json("s3a://bda-wiki-bucket/wiki_min.json")
         val dataset = spark.sqlContext.read.json("data/wiki_small.json")
 
         println("preprocess dataset...")
