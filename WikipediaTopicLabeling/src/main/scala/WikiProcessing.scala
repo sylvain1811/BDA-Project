@@ -2,7 +2,7 @@ import org.apache.spark.ml.clustering.{KMeans, KMeansModel, LDA, LDAModel, Local
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.ml.feature.{CountVectorizer, RegexTokenizer, StopWordsRemover, Word2Vec}
 import org.apache.spark.ml.linalg.Vector
-import org.apache.spark.sql.functions.{desc, size}
+import org.apache.spark.sql.functions.{count, desc, explode, size}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 class WikiProcessing(spark: SparkSession, train: Boolean) {
@@ -60,7 +60,7 @@ class WikiProcessing(spark: SparkSession, train: Boolean) {
             kMeansModel
         } else KMeansModel.load("models/kmeans")
 
-        (kMeansModel, kMeansModel.transform(dataset).select("title", "word2Vec", "prediction"))
+        (kMeansModel, kMeansModel.transform(dataset).select("title", "stop_words", "word2Vec", "prediction"))
     }
 
     def showKMeansTopicLabeling(word2VecVectors: DataFrame, clusterCenters: Array[Vector], kMeansData: DataFrame): Unit = {
@@ -76,6 +76,16 @@ class WikiProcessing(spark: SparkSession, train: Boolean) {
 
         for (i <- 0 to 14) {
             println(result.filter(s"_2 == $i").show(false))
+        }
+    }
+
+    def showKMeansTopicByOcucrences(dataset: DataFrame): Unit = {
+        for (i <- 0 to 14) {
+            println(dataset.where(s"prediction == $i").withColumn("token_split", explode($"stop_words"))
+              .groupBy($"token_split")
+              .agg(count($"title") as "count")
+              .orderBy($"count".desc)
+              .show(false))
         }
     }
 

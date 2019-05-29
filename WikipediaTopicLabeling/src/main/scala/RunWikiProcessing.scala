@@ -1,8 +1,8 @@
 import org.apache.spark.ml.feature.{CountVectorizerModel, Word2VecModel}
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SparkSession,Row}
+import org.apache.spark.sql.functions._
 
-
-object WikipediaTopicLabeling {
+object RunWikiProcessing {
 
 
     def main(args: Array[String]) {
@@ -33,8 +33,12 @@ object WikipediaTopicLabeling {
         println("train kmeans...")
         val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData)
 
-        val word2VecModel = preprocessingModel.stages(3).asInstanceOf[Word2VecModel]
-        wikiProcessing.showKMeansTopicLabeling(word2VecModel.getVectors, kMeansModel.clusterCenters, kMeansData)
+        print("compute results...")
+        wikiProcessing.showKMeansTopicByOcucrences(kMeansData)
+
+
+//        val word2VecModel = preprocessingModel.stages(3).asInstanceOf[Word2VecModel]
+//        wikiProcessing.showKMeansTopicLabeling(word2VecModel.getVectors, kMeansModel.clusterCenters, kMeansData)
 
 //        print("LDA clustering...")
 //        val vocabulary = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
