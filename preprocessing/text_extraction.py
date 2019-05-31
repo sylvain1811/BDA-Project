@@ -1,14 +1,26 @@
 import os.path
 import re
-import subprocess
 
 
 def clean_string(string):
     return re.sub(r'([^\s\w]|_)+', '', string).replace("\t", " ")
 
-def process():
+def process_abstract():
+    with open('enwiki-latest-abstract1.xml', 'r') as f:
+        with open('data.json', 'w') as json:
+            for line in f:
+                if re.search("<title>", line):
+                #  if line[0:7] == '<title>':
+                    title = clean_string(line[18:-9])
+                    print('{"title": "', title, '", ', sep='', end='', file=json)
+                elif re.search("<abstract>", line):
+                #  elif line[0:10] == '<abstract>':
+                    text = clean_string(line[10:-12])
+                    print('"text": "', text, '"}', file=json)
+
+def process_pages_articles():
     with open('enwiki-latest-pages-articles1.xml-p10p30302', 'r') as f:
-        with open('categories.json', 'w') as json:
+        with open('categories_raw.json', 'w') as json:
             first = True
             for line in f:
                 line = line.lstrip(' ')
@@ -30,6 +42,8 @@ def process():
                 if re.search("\[\[Category:", line):
                     category = clean_string(line[10:-1])
                     json.write(' "')
+                    if len(category) == 0:
+                        print(len(category))
                     json.write(category)
                     json.write('",')
 
@@ -37,17 +51,11 @@ def process():
             json.write('')
             json.write('}')
             json.flush()
-    
-def download():
-    print('downloading...')
-    subprocess.run(["wget", "https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles1.xml-p10p30302.bz2"])
-    print('extracting...')
-    subprocess.run(["bzip2", "-d",
-        "enwiki-latest-pages-articles1.xml-p10p30302.bz2"])
+   
 
 if __name__ == '__main__':
-    if not os.path.isfile('enwiki-latest-pages-articles1.xml-p10p30302'):
-        download()
-    print('preprocessing...')
-    process()
+    print('preprocessing abstract...')
+    process_abstract()
+    print('preprocessing pages articles...')
+    process_pages_articles()
 

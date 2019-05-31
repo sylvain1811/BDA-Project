@@ -7,35 +7,31 @@ The objective is to analyze Wikipedia in order to automatically give a topic
 name for each article, by selecting more or less 5 words which describe best the
 article.
 
+It is a bit of an explanatory project, where multiple algorithms will be tried
+and compared.
+
 ## Dataset description
 
 The dataset which is used for the analysis is available here:
 
 [Wikipedia dumps](https://dumps.wikimedia.org/enwiki/latest/)
 
-The one named [enwiki-latest-pages-articles.xml.bz2](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2) is the full dataset (15GB compressed), but we often use [enwiki-latest-pages-articles1.xml-p10p30302.bz2](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles1.xml-p10p30302.bz2) which contains fewer articles.
+There are actually multiple files from the link below which are used, depending
+on which algorithm is used:
 
-It contains a very messy XML document, which obviously needs to be pre-processed
-before extracting anything from it. Let's describe a little bit its structure.
+- The abstract dumps, which contains only the titles and abstract of the articles
+- The page dump, which contains the whole articles (titles, links, categories, etc...)
 
-The beginning of the document has various unneeded tags which seems to be more
-or less metadata. Let's forget about this and scroll down a little. At some point,
-a `<page>` tag should appear. Each of these tags represent a Wikipedia article
-and contains the information we are looking for, as well as unwanted information
-which need to be filtered out.
+In any case, these dataset contain very messy XML documents, which obviously
+need to be pre-processed before extracting anything from it. Therefore, a
+Python script is used to preprocessed it, which result to a JSON file, far
+more usable for Spark.
 
-Among the sub-tag of the `<page>`, two tags which seem obviously useful are:
+The data which are kept are the following:
 
-1. `<title>`
-2. `<text>`
-
-One can notice that the text is far from a clean text ready to be used. For example,
-the subtitles of the page are represented like this:
-
-== subtitle ==
-
-Furthermore, there are a lot of brackets (`[]` and `{}`) which seem to represent the
-multiple links between articles, a thing that wikipedia is well-known for.
+- Title
+- abstract
+- categories
 
 ## Features descriptions/extraction and preprocessing
 
@@ -264,7 +260,7 @@ Here it is `ec2-100-25-152-130.compute-1.amazonaws.com`
 
 Then you can use the script `launch-app.sh` to upload the packaged app and submit a new job. It requires 2 arguments which are the cluster name and the master DNS name.
 
-:warning: Spark bin folder need to be in your PATH. You can update your PATH variable by adding `export PATH=$PATH:/path/to/spark-2.4.3-bin-hadoop2.7/bin` in `.env` file, which will be sourced automatically by running the following script.
+:warning: Spark bin folder needs to be in your PATH. You can update your PATH variable by adding `export PATH=$PATH:/path/to/spark-2.4.3-bin-hadoop2.7/bin` in `.env` file, which will be sourced automatically by running the following script.
 
 ```bash
 $ ./launch-app.sh bda-wiki-cluster ec2-100-25-152-130.compute-1.amazonaws.com

@@ -52,9 +52,9 @@ class WikiProcessing(spark: SparkSession, train: Boolean) {
     }
 
 
-    def kMeans(dataset: DataFrame): (KMeansModel, DataFrame) = {
+    def kMeans(dataset: DataFrame, K: Int): (KMeansModel, DataFrame) = {
         val kMeansModel = if (train) {
-            val kMeans = new KMeans().setK(15).setSeed(1L).setFeaturesCol("word2Vec")
+            val kMeans = new KMeans().setK(K).setSeed(1L).setFeaturesCol("word2Vec")
             val kMeansModel = kMeans.fit(dataset)
             kMeansModel.write.overwrite.save("models/kmeans")
             kMeansModel
@@ -67,25 +67,27 @@ class WikiProcessing(spark: SparkSession, train: Boolean) {
         val wordClusterSimilarity = computeWordClusterSimilarity(word2VecVectors, clusterCenters)
 
         println("compute clusters description...")
-        val clusterDescriptions = (for (i <- 0 to 14) yield getClusterDescription(i, wordClusterSimilarity)).toArray
+        val clusterDescriptions = (for (i <- 0 to clusterCenters.length) yield getClusterDescription(i, wordClusterSimilarity)).toArray
 
         println("compute final result...")
         val result = spark.createDataFrame(kMeansData.select("title", "prediction").collect().map {
             case Row(title: String, prediction: Int) => (title, prediction, clusterDescriptions(prediction))
         })
 
-        for (i <- 0 to 14) {
+        for (i <- 0 to clusterCenters.length) {
             println(result.filter(s"_2 == $i").show(false))
         }
     }
 
-    def showKMeansTopicByOcucrences(dataset: DataFrame): Unit = {
-        for (i <- 0 to 14) {
+    def showKMeansTopicByOcucrence(dataset: DataFrame, K: Int): Unit = {
+        for (i <- 0 until (K-1)) {
+            println(s"Topic $i:")
             println(dataset.where(s"prediction == $i").withColumn("token_split", explode($"stop_words"))
               .groupBy($"token_split")
               .agg(count($"title") as "count")
               .orderBy($"count".desc)
               .show(false))
+            println(dataset.where(s"prediction == $i").select("title").show(false))
         }
     }
 

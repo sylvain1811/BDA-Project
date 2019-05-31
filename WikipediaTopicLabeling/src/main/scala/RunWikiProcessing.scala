@@ -4,6 +4,10 @@ import org.apache.spark.sql.functions._
 
 object RunWikiProcessing {
 
+    object TopicType extends Enumeration {
+        type ClusteringType = Value
+        val Occurence, Word2Vec, LDA, Classification = Value
+    }
 
     def main(args: Array[String]) {
 
@@ -20,6 +24,8 @@ object RunWikiProcessing {
 
         spark.sparkContext.setLogLevel("ERROR")
 
+        val topicType = TopicType.Occurence
+
         val dataset = spark.sqlContext
           .read.json("data/data.json")
           .filter(row => row(0) == null) // remove corrupted records
@@ -30,20 +36,30 @@ object RunWikiProcessing {
         println("preprocess dataset...")
         val (preprocessingModel, preprocessedData) = wikiProcessing.preprocessing(dataset)
 
-        println("train kmeans...")
-        val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData)
+        topicType match {
 
-        print("compute results...")
-        wikiProcessing.showKMeansTopicByOcucrences(kMeansData)
+            case TopicType.Occurence =>
+                println("train kmeans...")
+                val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData, 15)
 
+                println("compute results...")
+                wikiProcessing.showKMeansTopicByOcucrence(kMeansData, 15)
 
-//        val word2VecModel = preprocessingModel.stages(3).asInstanceOf[Word2VecModel]
-//        wikiProcessing.showKMeansTopicLabeling(word2VecModel.getVectors, kMeansModel.clusterCenters, kMeansData)
+            case TopicType.Word2Vec =>
+                println("train kmeans...")
+                val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData, 15)
 
-//        print("LDA clustering...")
-//        val vocabulary = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
-//        val ldaResult = wikiProcessing.lda(spark, preprocessedData, vocabulary)
-//        println(ldaResult.filter("cluster == 4").show(false))
+                println("compute results...")
+                val word2VecModel = preprocessingModel.stages(3).asInstanceOf[Word2VecModel]
+                wikiProcessing.showKMeansTopicLabeling(word2VecModel.getVectors, kMeansModel.clusterCenters, kMeansData)
+
+            case TopicType.LDA =>
+                print("LDA clustering...")
+                val vocabulary = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
+                val ldaResult = wikiProcessing.lda(spark, preprocessedData, vocabulary)
+
+                println(ldaResult.filter("cluster == 4").show(false))
+        }
 
         spark.stop()
     }
