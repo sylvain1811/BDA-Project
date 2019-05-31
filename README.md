@@ -22,130 +22,184 @@ on which algorithm is used:
 - The abstract dumps, which contains only the titles and abstract of the articles
 - The page dump, which contains the whole articles (titles, links, categories, etc...)
 
-In any case, these dataset contain very messy XML documents, which obviously
-need to be pre-processed before extracting anything from it. Therefore, a
-Python script is used to preprocessed it, which result to a JSON file, far
-more usable for Spark.
+Note that there is no need to download it by yourself. The whole download and
+preprocessing can be done by launching the following command from the root
+folder:
+
+```bash
+./preprocessing/preprocess.sh
+```
+
+### Size of the dataset
+
+| dataset  | size                      |
+|----------|---------------------------|
+| abstract | 868.4Mb                   |
+| page-1   | 646.0Mb                   |
+| page     | 15Go (compressed archive) |
+
+Because the complete page dump has a size of 15Go when its compressed, a subset
+has been used (page-1) for the tests in order to have a faster execution time.
+
+
+### Content of the dataset
+
+Each dump contains a very messy XML document, with various information ranging
+from the title of a document to the author of the last modification. There are
+also a lot of specials characters in the whole document or strange annotations.
 
 The data which are kept are the following:
 
-- Title
-- abstract
-- categories
+- Abstract dump
+    - Title
+    - Abstract
+- Page dump
+    - Title
+    - Categories
+
+The abstract are used for unsupervised clustering, while the categories are
+intended to be used with supervised classification.
+
 
 ## Features descriptions/extraction and preprocessing
 
-Because Spark is not known for its XML parsing skills, a first preprocessing step
-is done by this [tool](https://github.com/attardi/wikiextractor) written in python. As a result,
-a JSON document is produced with a much simpler structure:
+The raw dataset as presented in the previous chapter has two problems:
+
+1. It is an XML document, and Spark is not known for its XML parsing skills
+2. It contains a lot of unnecessary information, as well as specials characters
+   which are of no use for the purpose of this project.
+
+To solve theses problems, a preprocessing step in Python needs to be done. The
+resulting files are two JSON documents, one for the abstract named `abstract.json` 
+and another for the categories named `categories.json`.
+
+Let's see what they look like:
 
 ```json
+// abstract.json
 {
-  "id": "unique id for each article",
-  "url": "wikipedia url",
   "title": "title of the article",
-  "text": "text of the article"
+  "text": "abstract of the article"
+}
+
+// categories.json
+{
+  "title": "title of the article",
+  "categories": ["a random category", "another one", ... ]
 }
 ```
 
-The resulting script create a folder structure which is as follow:
-
-```
-wiki
-    -- AA
-        -- wiki_00
-        -- wiki_01
-        -- ...
-        -- wiki_99
-    -- AB
-        -- wiki_00
-        -- wiki_01
-        -- ...
-        -- wiki_99
-    -- AC
-        -- ...
-    -- ...
-```
-
-This is not really a problem since these multiple documents can be merged together
-with a simple bash command from the root directory (i.e. wiki/):
-
-```bash
-for dir in *; do
-    cat $dir/** >> wiki.json;
-done
-```
-
-Since the output is a json file, Spark can load it into a `DataFrame` without any troubles.
-The idea is that each row is an article, with the following columns: **id**, **url**, **title**, **text**
-
-Here is the schema of the loaded `DataFrame`:
-
-| id  | url        | title            | text                         |
-| --- | ---------- | ---------------- | ---------------------------- |
-| 0   | http://... | Title of article | Preprocessed text of article |
-| ... | ...        | ...              | ...                          |
-
-Each **text** cell of the `DataFrame` can then be pre-processed with the
-usual NLP pre-processing (stop words removal, apply a lemmatizer, ...).
+These two documents can now be trivially read into a Spark `DataFrame`. Of
+course, this first step has for only goal to handle the dataset to Spark in a
+friendly way. Therefore, more preprocessing needs to be done from Spark.
 
 ### Preprocess the DataFrame with Spark ML
 
-Two transformations are applied to the raw dataset before starting its analysis.
-Each one is described below.
+Let's start with the abstract dataset which is used for the unsupervised
+algorithms. Two transformations are applied to the raw dataset before
+starting its analysis. Each one is described below.
 
-1. The text of each article is just a big `String`, which is not ideal for working
+1. The text of each abstract is just a big `String`, which is not ideal for working
    with words. This problem can easily be solved by applying a _Tokenizer_ to each
    cell of the text column. This will split the String, leaving us an array of words
    to work with.
 2. It's very usual to remove stop words from a corpus. Without surprises, this
    preprocessing undergo the same process.
 
-### Extract features with TF-IDF
+It is then necessary to extract features from these clean abstract, to
+represent them in a way where computations can be applied to them.
 
-Even though the text is tokenized and freed from stop words, it is still not
-possible to analyze it. One more step is needed to extract a small number of
-features from these words. For this, a term frequency hashing combined to the
-inverse document frequency is applied to the `DataFrame`. Each article is therefore
-represented by a chosen number of features.
+Two different features extraction algorithms are used:
+
+1. `CountVectorizer`: Extract a vocabulary from the abstracts, which can then
+   be used by LDA.
+2. `Word2Vec`: Trains a model which map a string to a vector, where similar
+   words are close in the vector space. These features can be used with KMeans
+   clustering.
+
+For the categories dataset, ... TODO !!!
 
 ## Analysis questions
 
 The questions that this project is trying to answer can be formulated like this:
 
-- How well can we regroup wikipedia articles according to their similarity ?
+- How well can we regroup Wikipedia articles according to their similarity ?
 - Can we extract the most informative words from these groups in order to give them a label ?
 
 In other words, the idea is to apply topic modeling to the Wikipedia corpus,
-thanks to various techniques and evaluate them.
+thanks to various techniques and evaluate them. At the end, a small number of
+topic must be extracted, with a high level of abstraction. It means that the
+topic must define broad subjects like politics, geography, art, etc... While it
+should not find specific topics like e.g. Geopolitics of Europe.
 
 ## Algorithms
 
-### LDA
+This chapter is split into to categories, one for the unsupervised algorithms
+and one for the supervised algorithm.
 
-[TODO]
+### Unsupervised algorithms
 
-### Clustering
+Three attempts have been made, where each one is a bit better than the previous
+one. Let's describe them one by one.
 
-For example, with K-Means:
+#### LDA
 
-1. Using a feature vector for each document
-2. K = number of desired topics
+The first idea was to use `LDA` to cluster the vocabulary extracted thanks to
+`CountVectorizer`. Once the documents are regrouped, it is possible to
+retrieved the words assigned to each cluster, which is intended to be used as the
+description of the topic.
 
-The drawback of using K-Means is that there are no metrics to evaluate it, except
-from checking by hand to make sure it is more or less accurate.
+With a bit of imagination, the results seem to have a certain logic. However,
+it is not as obvious as it should and some clusters are a bit messy.
 
-### Word2Vec
 
-1. Get the whole corpus of the articles.
-2. Generate a Word2Vec model with the whole corpus. Each word is therefore represented by a feature vector.
-3. Get the corpus of one cluster of the previous part.
-4. Apply Word2Vec to the cluster's corpus.
-5. Take the mean feature vector of the cluster's corpus.
-6. Look at the closest feature vectors of this mean feature vector. Their corresponding
-   word should be a good insight of the cluster.
+#### Word2Vec and KMeans
+
+The second idea was to use `KMeans` to cluster the vectors extracted thanks
+to `Word2Vec`. Once the documents are regrouped, their label is assigned as
+follow:
+
+- Get the vector representing the center of the cluster
+- Find the N closest vectors and retrieve the words they are mapping
+
+The results are a bit improved compared to the `LDA` algorithm, but it is not
+the holy grail either.
+
+
+#### KMeans and words occurrences
+
+Finally, a third method has been tried. The idea is pretty easy and can be
+described as follow:
+
+- Apply `KMeans` to the `Word2Vec` vectors
+- For each cluster, retrieve all the words belonging to it
+- Count the number of occurrences of each unique word of the cluster
+- Extract the N words with the highest occurrences and use them as a label
+
+The results are far more comprehensible and the subject of a topic can be
+discovered in a second.
 
 ## Optimizations
+
+At the beginning, the page dataset containing the whole corpus was used for the
+unsupervised clustering, but the results were really bad independently from
+the algorithm.
+
+After analyzing the dataset, it occurred that each Wikipedia article contains a LOT of
+details. Let's take a city article for the sake of the example:
+
+The following categories can be found in its sub-chapters:
+
+- Geography
+- Politics
+- History
+- Education
+- Economy
+- etc..
+
+It results that a complete article contains far more information, degrading the
+performance of the clustering. On the other hand, the abstract of each article
+is very concise and give a better insight to cluster it.
 
 ## Tests and evaluations
 

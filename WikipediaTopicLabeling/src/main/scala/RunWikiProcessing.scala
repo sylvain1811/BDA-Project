@@ -24,41 +24,54 @@ object RunWikiProcessing {
 
         spark.sparkContext.setLogLevel("ERROR")
 
-        val topicType = TopicType.Occurence
+        val topicType = TopicType.Classification
+        val train = false
 
-        val dataset = spark.sqlContext
-          .read.json("data/data.json")
-          .filter(row => row(0) == null) // remove corrupted records
-          .drop("_corrupt_record")
+        if (topicType != TopicType.Classification) {
+            val dataset = spark.sqlContext
+              .read.json("data/abstract.json")
+              .filter(row => row(0) == null) // remove corrupted records
+              .drop("_corrupt_record")
 
-        val wikiProcessing = new WikiProcessing(spark, false)
+            val wikiProcessing = new WikiUnsupervisedProcessing(spark, train)
 
-        println("preprocess dataset...")
-        val (preprocessingModel, preprocessedData) = wikiProcessing.preprocessing(dataset)
+            println("preprocess dataset...")
+            val (preprocessingModel, preprocessedData) = wikiProcessing.preprocessing(dataset)
 
-        topicType match {
+            topicType match {
+                case TopicType.Occurence =>
+                    println("train kmeans...")
+                    val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData, 15)
 
-            case TopicType.Occurence =>
-                println("train kmeans...")
-                val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData, 15)
+                    println("compute results...")
+                    wikiProcessing.showKMeansTopicByOcucrence(kMeansData, 15)
 
-                println("compute results...")
-                wikiProcessing.showKMeansTopicByOcucrence(kMeansData, 15)
+                case TopicType.Word2Vec =>
+                    println("train kmeans...")
+                    val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData, 15)
 
-            case TopicType.Word2Vec =>
-                println("train kmeans...")
-                val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData, 15)
+                    println("compute results...")
+                    val word2VecModel = preprocessingModel.stages(3).asInstanceOf[Word2VecModel]
+                    wikiProcessing.showKMeansTopicLabeling(word2VecModel.getVectors, kMeansModel.clusterCenters, kMeansData)
 
-                println("compute results...")
-                val word2VecModel = preprocessingModel.stages(3).asInstanceOf[Word2VecModel]
-                wikiProcessing.showKMeansTopicLabeling(word2VecModel.getVectors, kMeansModel.clusterCenters, kMeansData)
+                case TopicType.LDA =>
+                    print("LDA clustering...")
+                    val vocabulary = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
+                    val ldaResult = wikiProcessing.lda(spark, preprocessedData, vocabulary)
 
-            case TopicType.LDA =>
-                print("LDA clustering...")
-                val vocabulary = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
-                val ldaResult = wikiProcessing.lda(spark, preprocessedData, vocabulary)
+                    println(ldaResult.filter("cluster == 4").show(false))
+            }
+        } else {
+            println("Classification...")
+            val dataset = spark.sqlContext
+              .read.json("data/categories.json")
 
-                println(ldaResult.filter("cluster == 4").show(false))
+            val wikiSupervisedProcessing = new WikiSupervisedProcessing(spark, train)
+
+            val categoriesDF = wikiSupervisedProcessing.extractCategories(dataset)
+
+            println(categoriesDF.show(false))
+
         }
 
         spark.stop()

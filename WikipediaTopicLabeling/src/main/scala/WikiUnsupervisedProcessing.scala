@@ -5,7 +5,7 @@ import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.sql.functions.{count, desc, explode, size}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
-class WikiProcessing(spark: SparkSession, train: Boolean) {
+class WikiUnsupervisedProcessing(spark: SparkSession, train: Boolean) {
 
     import spark.implicits._
 
