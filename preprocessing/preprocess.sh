@@ -1,10 +1,10 @@
 #!/bin/sh
 
 function download_abstract {
-    if [ ! -f enwiki-latest-abstract1.xml ]; then
-        wget https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-abstract1.xml.gz
+    if [ ! -f enwiki-latest-abstract.xml ]; then
+        wget https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-abstract.xml.gz
         echo 'extract abstract dataset...'
-        gzip -d enwiki-latest-abstract1.xml.gz
+        gzip -d enwiki-latest-abstract.xml.gz
     fi
     
     if [ ! -f data.json ]; then

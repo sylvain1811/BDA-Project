@@ -7,7 +7,7 @@ def clean_string(string):
 
 def process_abstract():
     print('preprocessing abstract...')
-    with open('enwiki-latest-abstract1.xml', 'r') as f:
+    with open('enwiki-latest-abstract.xml', 'r') as f:
         with open('abstract.json', 'w') as json:
             for line in f:
                 if re.search("<title>", line):

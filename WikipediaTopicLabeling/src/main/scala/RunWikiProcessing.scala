@@ -24,7 +24,7 @@ object RunWikiProcessing {
 
         spark.sparkContext.setLogLevel("ERROR")
 
-        val topicType = TopicType.Classification
+        val topicType = TopicType.Occurence
         val train = false
 
         if (topicType != TopicType.Classification) {

@@ -34,8 +34,8 @@ folder:
 
 | dataset  | size                      |
 |----------|---------------------------|
-| abstract | 868.4Mb                   |
-| page-1   | 646.0Mb                   |
+| abstract | 5.4GB                     |
+| page-1   | 617MB                   |
 | page     | 15Go (compressed archive) |
 
 Because the complete page dump has a size of 15Go when its compressed, a subset
@@ -90,7 +90,7 @@ Let's see what they look like:
 ```
 
 These two documents can now be trivially read into a Spark `DataFrame`. Of
-course, this first step has for only goal to handle the dataset to Spark in a
+course, this first step has for only goal to give the dataset to Spark in a
 friendly way. Therefore, more preprocessing needs to be done from Spark.
 
 ### Preprocess the DataFrame with Spark ML
@@ -117,7 +117,8 @@ Two different features extraction algorithms are used:
    words are close in the vector space. These features can be used with KMeans
    clustering.
 
-For the categories dataset, ... TODO !!!
+For the categories dataset, there are actually not a lot of preprocessing,
+since they can be extracted in a really simple way.
 
 ## Analysis questions
 
@@ -179,6 +180,20 @@ described as follow:
 The results are far more comprehensible and the subject of a topic can be
 discovered in a second.
 
+### Supervised algorithm
+
+The supervised algorithm was intended to be used with the categories dataset.
+However, once they had been loaded into a `DataFrame`, it reveals some problem
+with the data:
+
+There are far too much categories, some being very specific and containing only
+2-3 articles. Furthermore, each article has multiple categories assigned to
+it. It results that these categories are absolutely not usable as
+labels for unsupervised learning.
+
+No further processing have been done with this dataset, therefore no specific
+supervised algorithm has been chosen.
+
 ## Optimizations
 
 At the beginning, the page dataset containing the whole corpus was used for the
@@ -197,9 +212,9 @@ The following categories can be found in its sub-chapters:
 - Economy
 - etc..
 
-It results that a complete article contains far more information, degrading the
+It results that a complete article contains far more information than we need, degrading the
 performance of the clustering. On the other hand, the abstract of each article
-is very concise and give a better insight to cluster it.
+is very concise and give a better insight about it.
 
 ## Tests and evaluations
 
