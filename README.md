@@ -218,9 +218,73 @@ is very concise and give a better insight about it.
 
 ## Tests and evaluations
 
+Since the algorithms which are used are unsupervised, there are no performance
+metrics which can be used for the tests. However, one point which can be
+measured is the time needed for each algorithm to produce a result.
+
+Therefore, the evaluation has been done around two aspects:
+
+- the time needed for the algorithm to train
+- an empirical evaluation of how  easily the topic of a group of words can be
+  guessed
+
+Surprisingly, the algorithm with the better empirical results is also the one
+with the best train time. Their ranking is the following:
+
+1. KMeans + occurrences
+2. KMeans + Word2Vec
+3. LDA + CountVectorizer
+
+In terms of clustering, `KMeans` is really faster than `LDA`. On the other
+hand, the choice of the feature extractor does not have a big impact on the
+computation time.
+
+There is something else which has an influence on the compute time: the number
+of transformations which needs to be applied to the `DataFrame`. For example,
+counting the number of occurrences of each word inside a cluster can be
+trivially done, while assigning each word vector to its closer cluster and then
+find the closest vector to the center needs more transformations.
+
+
 ## Results
 
+Let's go back to the analysis question: _"How well can we produce high-level
+topics, regrouping similar Wikipedia articles ?"_ 
+
+Well, let's have a look at one of the clusters produced by KMeans +
+occurrences: 
+
+![cluster](images/cluster.png)
+![articles](images/articles.png)
+
+There are three interesting things to discuss:
+
+First, we can see that the cluster is regrouping some artistic production like
+movies, cinema, music, band, writing etc... This is indeed a "high-level" topic which
+could be named for example "art".
+
+On the other hand, we can notice that multiple specific words are given, and
+the "high-level" topic must be discovered by the reader.
+
+Finally, the number of cluster has an influence on the results. For example, if
+too few clusters are specified, some clusters will look like a mix between
+multiple topics. On the contrary, when too many clusters are specified, some
+clusters will split into different ones (e.g. the picture shown above could be
+split into _cinema_ and _music_), and completely new clusters, will be created.
+
+To conclude these results, we can say that yes, it is possible to regroup
+similar articles, and the result seems pretty neat, but it is harder to assign
+them a "high-level" topic with only a few words.
+
 ## Future work
+
+While the categories cannot be used as label for an unsupervised algorithm, no
+further investigation about a labellized dataset have been made. Because a
+supervised algorithm can be evaluated more easily, developing a classification
+algorithm would be the next logical step of this project.
+
+In parallel, improving the unsupervised topics labeling by narrowing down to 2
+or 3 words the results would be another interesting task to solve.
 
 ## Cloud cluster
 

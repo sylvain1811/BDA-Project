@@ -25,7 +25,7 @@ object RunWikiProcessing {
         spark.sparkContext.setLogLevel("ERROR")
 
         val topicType = TopicType.Occurence
-        val train = false
+        val train = true
 
         if (topicType != TopicType.Classification) {
             val dataset = spark.sqlContext
@@ -41,10 +41,10 @@ object RunWikiProcessing {
             topicType match {
                 case TopicType.Occurence =>
                     println("train kmeans...")
-                    val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData, 15)
+                    val (kMeansModel, kMeansData) = wikiProcessing.kMeans(preprocessedData,20)
 
                     println("compute results...")
-                    wikiProcessing.showKMeansTopicByOcucrence(kMeansData, 15)
+                    wikiProcessing.showKMeansTopicByOcucrence(kMeansData, 20)
 
                 case TopicType.Word2Vec =>
                     println("train kmeans...")
