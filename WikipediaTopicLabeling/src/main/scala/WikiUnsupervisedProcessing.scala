@@ -95,11 +95,12 @@ class WikiUnsupervisedProcessing(spark: SparkSession, train: Boolean) {
         import spark.implicits._
 
         val ldaModel = if (train) {
-            val lda = new LDA().setK(5).setMaxIter(1)
+            val lda = new LDA().setK(15).setMaxIter(100)
             val ldaModel = lda.fit(dataset)
             ldaModel.write.overwrite.save("models/lda")
             ldaModel
         } else {
+            println("load lda model...")
             LocalLDAModel.load("models/lda")
         }
 
@@ -109,10 +110,10 @@ class WikiUnsupervisedProcessing(spark: SparkSession, train: Boolean) {
 
         val topics = getLDATopics(spark, ldaModel, vocabulary, print = true)
 
-        val ldaDataset = ldaModel.transform(dataset).select("id", "title", "topicDistribution")
+        val ldaDataset = ldaModel.transform(dataset).select("title", "topicDistribution")
 
         ldaDataset.map {
-            case Row(id: String, title: String, topicDistribution: Vector) =>
+            case Row(title: String, topicDistribution: Vector) =>
                 (title, topicDistribution, topics(topicDistribution.argmax).map(_._1), topicDistribution.argmax)
         }.toDF("title", "topicDistribution", "topicWords", "cluster")
     }

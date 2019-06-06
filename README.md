@@ -7,12 +7,12 @@ The objective is to analyze Wikipedia in order to automatically give a topic
 name for each article, by selecting more or less 5 words which describe best the
 article.
 
-It is a bit of an explanatory project, where multiple algorithms will be tried
+It is a bit of an exploratory project, where multiple algorithms will be tried
 and compared.
 
 ## Dataset description
 
-The dataset which is used for the analysis is available here:
+The datasets which are used for the analysis are available here:
 
 [Wikipedia dumps](https://dumps.wikimedia.org/enwiki/latest/)
 
@@ -27,16 +27,17 @@ preprocessing can be done by launching the following command from the root
 folder:
 
 ```bash
-./preprocessing/preprocess.sh
+cd preprocessing
+./preprocess.sh
 ```
 
 ### Size of the dataset
 
-| dataset  | size                      |
-|----------|---------------------------|
-| abstract | 5.4GB                     |
-| page-1   | 617MB                   |
-| page     | 15Go (compressed archive) |
+| dataset  | size                     |
+|----------|--------------------------|
+| abstract | 5.4GB (extracted archive)|
+| page-1   | 617MB (extracted archive)|
+| page     | 15Go (compressed archive)|
 
 Because the complete page dump has a size of 15Go when its compressed, a subset
 has been used (page-1) for the tests in order to have a faster execution time.

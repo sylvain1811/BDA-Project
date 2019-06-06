@@ -24,7 +24,7 @@ object RunWikiProcessing {
 
         spark.sparkContext.setLogLevel("ERROR")
 
-        val topicType = TopicType.Occurence
+        val topicType = TopicType.LDA
         val train = true
 
         if (topicType != TopicType.Classification) {
@@ -59,7 +59,9 @@ object RunWikiProcessing {
                     val vocabulary = preprocessingModel.stages(2).asInstanceOf[CountVectorizerModel].vocabulary
                     val ldaResult = wikiProcessing.lda(spark, preprocessedData, vocabulary)
 
-                    println(ldaResult.filter("cluster == 4").show(false))
+                    for (i <- 0 until 15) {
+                        println(ldaResult.filter(s"cluster == $i").show(false))
+                    }
             }
         } else {
             println("Classification...")
@@ -71,7 +73,8 @@ object RunWikiProcessing {
             val categoriesDF = wikiSupervisedProcessing.extractCategories(dataset)
 
             println(categoriesDF.show(false))
-
+            println(categoriesDF.select("categories").distinct().count())
+            println(dataset.select("categories").count())
         }
 
         spark.stop()
