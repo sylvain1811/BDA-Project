@@ -303,11 +303,13 @@ aws_secret_access_key=associated_secret_access_key
 
 ### Upload dataset on S3
 
-Use aws-cli to upload the dataset (wiki.json) into a S3 bucket.
+Use aws-cli to upload the dataset and the stopwords file into a S3 bucket.
 
 ```bash
 aws s3 mb s3://bda-wiki-bucket
-aws s3 cp /path/to/wiki.json s3://bda-wiki-bucket
+aws s3 cp /path/to/stopwords.txt s3://bda-wiki-bucket
+aws s3 cp /path/to/abstract.json s3://bda-wiki-bucket
+aws s3 cp /path/to/categories.json s3://bda-wiki-bucket
 ```
 
 ### Configure Flintrock
@@ -387,14 +389,23 @@ bda-wiki-cluster:
 
 Here it is `ec2-100-25-152-130.compute-1.amazonaws.com`
 
-Then you can use the script `launch-app.sh` to upload the packaged app and submit a new job. It requires 2 arguments which are the cluster name and the master DNS name.
+Then you can use the script `run-app-in-cluster.sh` to upload the packaged app and submit a new job. It requires 2 arguments which are the cluster name and the master DNS name.
 
 :warning: Spark bin folder needs to be in your PATH. You can update your PATH variable by adding `export PATH=$PATH:/path/to/spark-2.4.3-bin-hadoop2.7/bin` in `.env` file, which will be sourced automatically by running the following script.
 
 ```bash
-$ ./launch-app.sh bda-wiki-cluster ec2-100-25-152-130.compute-1.amazonaws.com
+$ ./run-app-in-cluster.sh bda-wiki-cluster ec2-100-25-152-130.compute-1.amazonaws.com
 [...]
 Go to http://ec2-100-25-152-130.compute-1.amazonaws.com:8080 to view the app running.
 ```
 
 As the script say, you can then follow your app execution via spark web interface at the given address.
+
+### Problems
+
+Sometimes, the uploaded jars (hadoop-aws and aws-java-sdk) seems not te be loaded,
+so the job fail when trying to get data from S3. We did not find out what is the cause of this problem,
+even after hour of researches but sometimes, creating a new cluster and relaunch the app woks.
+
+Moreover, event when working great, the cluster isn't fully used.
+Only one core of one slave is used when running a job. We did not find out why in given delay.
