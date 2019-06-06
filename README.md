@@ -42,7 +42,6 @@ cd preprocessing
 Because the complete page dump has a size of 15Go when its compressed, a subset
 has been used (page-1) for the tests in order to have a faster execution time.
 
-
 ### Content of the dataset
 
 Each dump contains a very messy XML document, with various information ranging
@@ -52,15 +51,14 @@ also a lot of specials characters in the whole document or strange annotations.
 The data which are kept are the following:
 
 - Abstract dump
-    - Title
-    - Abstract
+  - Title
+  - Abstract
 - Page dump
-    - Title
-    - Categories
+  - Title
+  - Categories
 
 The abstract are used for unsupervised clustering, while the categories are
 intended to be used with supervised classification.
-
 
 ## Features descriptions/extraction and preprocessing
 
@@ -71,7 +69,7 @@ The raw dataset as presented in the previous chapter has two problems:
    which are of no use for the purpose of this project.
 
 To solve theses problems, a preprocessing step in Python needs to be done. The
-resulting files are two JSON documents, one for the abstract named `abstract.json` 
+resulting files are two JSON documents, one for the abstract named `abstract.json`
 and another for the categories named `categories.json`.
 
 Let's see what they look like:
@@ -136,7 +134,7 @@ should not find specific topics like e.g. Geopolitics of Europe.
 
 ## Algorithms
 
-This chapter is split into to categories, one for the unsupervised algorithms
+This chapter is split into two categories, one for the unsupervised algorithms
 and one for the supervised algorithm.
 
 ### Unsupervised algorithms
@@ -154,7 +152,6 @@ description of the topic.
 With a bit of imagination, the results seem to have a certain logic. However,
 it is not as obvious as it should and some clusters are a bit messy.
 
-
 #### Word2Vec and KMeans
 
 The second idea was to use `KMeans` to cluster the vectors extracted thanks
@@ -166,7 +163,6 @@ follow:
 
 The results are a bit improved compared to the `LDA` algorithm, but it is not
 the holy grail either.
-
 
 #### KMeans and words occurrences
 
@@ -226,7 +222,7 @@ measured is the time needed for each algorithm to produce a result.
 Therefore, the evaluation has been done around two aspects:
 
 - the time needed for the algorithm to train
-- an empirical evaluation of how  easily the topic of a group of words can be
+- an empirical evaluation of how easily the topic of a group of words can be
   guessed
 
 Surprisingly, the algorithm with the better empirical results is also the one
@@ -246,14 +242,13 @@ counting the number of occurrences of each word inside a cluster can be
 trivially done, while assigning each word vector to its closer cluster and then
 find the closest vector to the center needs more transformations.
 
-
 ## Results
 
 Let's go back to the analysis question: _"How well can we produce high-level
-topics, regrouping similar Wikipedia articles ?"_ 
+topics, regrouping similar Wikipedia articles ?"_
 
 Well, let's have a look at one of the clusters produced by KMeans +
-occurrences: 
+occurrences:
 
 ![cluster](images/cluster.png)
 ![articles](images/articles.png)
@@ -273,7 +268,7 @@ multiple topics. On the contrary, when too many clusters are specified, some
 clusters will split into different ones (e.g. the picture shown above could be
 split into _cinema_ and _music_), and completely new clusters, will be created.
 
-To conclude these results, we can say that yes, it is possible to regroup
+To conclude with these results, we can say that yes, it is possible to regroup
 similar articles, and the result seems pretty neat, but it is harder to assign
 them a "high-level" topic with only a few words.
 
