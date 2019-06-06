@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 function download_abstract {
     if [ ! -f enwiki-latest-abstract.xml ]; then
@@ -7,7 +7,7 @@ function download_abstract {
         gzip -d enwiki-latest-abstract.xml.gz
     fi
     
-    if [ ! -f data.json ]; then
+    if [ ! -f abstract.json ]; then
         python3 -c 'from text_extraction import process_abstract; process_abstract()'
     fi
 }
