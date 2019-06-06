@@ -10,7 +10,7 @@ CLUSTER_NAME=$1 # flintrock name of the cluster
 CLUSTER_MASTER_DNS_NAME=$2 # DNS name of the master
 
 # Copy packaged app to cluster
-flintrock copy-file $CLUSTER_NAME WikipediaTopicLabeling/target/scala-2.11/wikipedia-topic-project_2.11-1.0.jar /home/ec2-user/
+flintrock copy-file $CLUSTER_NAME ../WikipediaTopicLabeling/target/scala-2.11/wikipedia-topic-project_2.11-1.0.jar /home/ec2-user/
 
 # Launch app in cluster
 spark-submit \
