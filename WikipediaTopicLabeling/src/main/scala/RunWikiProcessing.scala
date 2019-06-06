@@ -4,6 +4,8 @@ import org.apache.spark.sql.functions._
 
 object RunWikiProcessing {
 
+    val CLOUD_ENV = false // false: run in local, true: run in cloud cluster
+
     object TopicType extends Enumeration {
         type ClusteringType = Value
         val Occurence, Word2Vec, LDA, Classification = Value
@@ -28,10 +30,12 @@ object RunWikiProcessing {
         val train = true
 
         if (topicType != TopicType.Classification) {
+            val path = if (CLOUD_ENV) "s3a://bda-wiki-bucket/abstract.json" else "data/abstract.json"
+
             val dataset = spark.sqlContext
-              .read.json("data/abstract.json")
-              .filter(row => row(0) == null) // remove corrupted records
-              .drop("_corrupt_record")
+                .read.json(path)
+                .filter(row => row(0) == null) // remove corrupted records
+                .drop("_corrupt_record")
 
             val wikiProcessing = new WikiUnsupervisedProcessing(spark, train)
 
@@ -63,8 +67,10 @@ object RunWikiProcessing {
             }
         } else {
             println("Classification...")
+            val path = if (CLOUD_ENV) "s3a://bda-wiki-bucket/categories.json" else "data/categories.json"
+
             val dataset = spark.sqlContext
-              .read.json("data/categories.json")
+                .read.json(path)
 
             val wikiSupervisedProcessing = new WikiSupervisedProcessing(spark, train)
 

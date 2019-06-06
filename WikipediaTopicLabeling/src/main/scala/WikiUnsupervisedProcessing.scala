@@ -18,7 +18,8 @@ class WikiUnsupervisedProcessing(spark: SparkSession, train: Boolean) {
               .setPattern("\\W")
               .setMinTokenLength(4)
 
-            val stopwords = spark.read.text("data/stopwords.txt").collect.map(row => row.getString(0))
+            val path = if (RunWikiProcessing.CLOUD_ENV) "s3a://bda-wiki-bucket/stopwords.txt" else "data/stopwords.txt"
+            val stopwords = spark.read.text(path).collect.map(row => row.getString(0))
 
             val stopWordRemover = new StopWordsRemover()
               .setInputCol("token")
