@@ -14,7 +14,7 @@ flintrock copy-file $CLUSTER_NAME ../WikipediaTopicLabeling/target/scala-2.11/wi
 
 # Launch app in cluster
 spark-submit \
-  --class WikipediaTopicLabeling \
+  --class RunWikiProcessing \
   --master spark://$CLUSTER_MASTER_DNS_NAME:7077 \
   --deploy-mode cluster \
   --conf "spark.jars.packages=com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.7" \
