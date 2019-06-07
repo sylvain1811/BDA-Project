@@ -354,6 +354,7 @@ This config file will be read by the script `create-cluster.sh`.
 Launch your cluster using the script `create-cluster.sh`
 
 ```bash
+cd aws-configuration
 ./create-cluster.sh bda-wiki-cluster
 ```
 
@@ -394,6 +395,7 @@ Then you can use the script `run-app-in-cluster.sh` to upload the packaged app a
 :warning: Spark bin folder needs to be in your PATH. You can update your PATH variable by adding `export PATH=$PATH:/path/to/spark-2.4.3-bin-hadoop2.7/bin` in `.env` file, which will be sourced automatically by running the following script.
 
 ```bash
+$ cd aws-configuration
 $ ./run-app-in-cluster.sh bda-wiki-cluster ec2-100-25-152-130.compute-1.amazonaws.com
 [...]
 Go to http://ec2-100-25-152-130.compute-1.amazonaws.com:8080 to view the app running.
