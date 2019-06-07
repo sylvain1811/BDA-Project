@@ -392,7 +392,7 @@ Here it is `ec2-100-25-152-130.compute-1.amazonaws.com`
 
 Then you can use the script `run-app-in-cluster.sh` to upload the packaged app and submit a new job. It requires 2 arguments which are the cluster name and the master DNS name.
 
-:warning: Spark bin folder needs to be in your PATH. You can update your PATH variable by adding `export PATH=$PATH:/path/to/spark-2.4.3-bin-hadoop2.7/bin` in `.env` file, which will be sourced automatically by running the following script.
+:warning: Spark bin folder needs to be in your PATH. You can update your PATH variable by adding `export PATH=$PATH:/path/to/spark-2.4.3-bin-hadoop2.7/bin` in `.env` file in the `aws-configuration` folder, which will be sourced automatically by running the following script.
 
 ```bash
 $ cd aws-configuration
